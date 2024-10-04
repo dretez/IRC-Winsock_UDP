@@ -31,11 +31,11 @@ int main(int argc, char* argv[])
 	int nbytes;
 	char buffer[BUFFERSIZE];
 
-	char *msg = NULL, *ip = NULL;
+	char* msg = NULL, * ip = NULL;
 	int port = SERV_UDP_PORT;
 
 	int i, flagtype;
-	short neededMFlags = 0x01;		/* Each bit in this variable marks a flag
+	short mandatoryFlags = 0x01;		/* Each bit in this variable marks a flag
 									* that must be set when running the Client
 									* for ex5 we'll only use 1 mandatory flag */
 	short argflags = 0x00;			/* This is the variable that will be used
@@ -43,13 +43,13 @@ int main(int argc, char* argv[])
 
 
 
-	/*========================= TESTA A SINTAXE =========================*/
+									/*========================= TESTA A SINTAXE =========================*/
 
-	/*
-	* Apesar de isto não ser necessário para a resolução dos exercícios,
-	* é algo que deve ser feito para validar se a aplicação é executada
-	* corretamente
-	*/
+									/*
+									* Apesar de isto não ser necessário para a resolução dos exercícios,
+									* é algo que deve ser feito para validar se a aplicação é executada
+									* corretamente
+									*/
 	if (argc < 2) {
 		fprintf(stderr, "Sintaxe: %s [flags] -m frase_a_enviar\n", argv[0]);
 		getchar();
@@ -87,12 +87,20 @@ int main(int argc, char* argv[])
 		if (flagtype == 2)
 		{
 			if (strcmp("msg", argv[i])) setMsg(argv[i + 1], &msg, &argflags);
-			else if (strcmp("íp", argv[i])) 
+			else if (strcmp("íp", argv[i]))
 				setIP(argv[i + 1], &ip, &argflags);
 			else if (strcmp("port", argv[i]))
 				setPort(atoi(argv[i + 1]), &port, &argflags);
 			i++;
 		}
+	}
+
+	if ((mandatoryFlags & argflags) != mandatoryFlags)
+	{
+
+		fprintf(stderr, "ERROR: Expected a message { -m \"Message here\"}");
+		getchar();
+		exit(EXIT_FAILURE);
 	}
 	/*=============== INICIA OS WINSOCKS ==============*/
 
