@@ -16,6 +16,7 @@ O protocolo usado e' o UDP.
 #define SERV_HOST_ADDR "127.0.0.1"
 #define SERV_UDP_PORT  6000
 #define BUFFERSIZE     4096
+#define TIMEOUT		   10000
 
 void Abort(char* msg);
 
@@ -124,6 +125,10 @@ int main(int argc, char* argv[])
 	if (sockfd == INVALID_SOCKET)
 		Abort("Impossibilidade de criar socket");
 
+	/*=============== CRIA SOCKET PARA ENVIO/RECEPCAO DE DATAGRAMAS ==============*/
+	DWORD timeout = TIMEOUT; // DWORD unsigned long
+	setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout, sizeof(timeout));
+
 	/*================= PREENCHE ENDERECO DO SERVIDOR ====================*/
 
 	memset((char*)&serv_addr, 0, sizeof(serv_addr)); /*Coloca a zero todos os bytes*/
@@ -152,8 +157,10 @@ int main(int argc, char* argv[])
 
 	nbytes = recvfrom(sockfd, buffer, sizeof(buffer), 0, NULL, NULL);
 
-	if (nbytes == SOCKET_ERROR)
-		Abort("Erro na recepcao de datagrams");
+	if (nbytes == SOCKET_ERROR) {
+		if (WSAGetLastError() != WSAETIMEDOUT) Abort("Erro na recepcao de datagrams");
+		else Abort("Timeout na recepcao");
+	}
 
 	buffer[nbytes] = '\0'; /*Termina a cadeia de caracteres recebidos com '\0'*/
 
