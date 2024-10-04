@@ -56,7 +56,6 @@ int main(int argc, char* argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	printf("%d\n", argflags);
 	for (i = 1; i < argc; i++)
 	{
 		flagtype = checkflag(argv[i]);
@@ -95,7 +94,6 @@ int main(int argc, char* argv[])
 			i++;
 		}
 	}
-	printf("%d\n", argflags);
 	/*=============== INICIA OS WINSOCKS ==============*/
 
 	/*
