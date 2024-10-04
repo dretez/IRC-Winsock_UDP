@@ -8,6 +8,8 @@ O protocolo usado e' o UDP.
 
 #include <winsock.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include "flags.h"
 
 #pragma comment(lib, "Ws2_32.lib")
 
@@ -29,6 +31,18 @@ int main(int argc, char* argv[])
 	int nbytes;
 	char buffer[BUFFERSIZE];
 
+	char *msg = NULL, *ip = NULL;
+	int port = SERV_UDP_PORT;
+
+	int i, flagtype;
+	short neededMFlags = 0x01;		/* Each bit in this variable marks a flag
+									* that must be set when running the Client
+									* for ex5 we'll only use 1 mandatory flag */
+	short argflags = 0x00;			/* This is the variable that will be used
+									* to check which mandatory flags were used */
+
+
+
 	/*========================= TESTA A SINTAXE =========================*/
 
 	/*
@@ -36,12 +50,52 @@ int main(int argc, char* argv[])
 	* é algo que deve ser feito para validar se a aplicação é executada
 	* corretamente
 	*/
-	if (argc != 2) {
-		fprintf(stderr, "Sintaxe: %s frase_a_enviar\n", argv[0]);
+	if (argc < 2) {
+		fprintf(stderr, "Sintaxe: %s [flags] -m frase_a_enviar\n", argv[0]);
 		getchar();
 		exit(EXIT_FAILURE);
 	}
 
+	printf("%d\n", argflags);
+	for (i = 1; i < argc; i++)
+	{
+		flagtype = checkflag(argv[i]);
+		if (!flagtype)
+		{
+			fprintf(stderr, "Syntax: Expected a flag before \"%s\"\n", argv[i]);
+			fprintf(stderr, "Sintaxe: %s [flags] -m frase_a_enviar\n", argv[0]);
+			getchar();
+			exit(EXIT_FAILURE);
+		}
+		if (flagtype == 1)
+		{
+			switch (*(argv[i] + 1))
+			{
+			case 'm':
+				setMsg(argv[i + 1], &msg, &argflags);
+				break;
+			case 'i':
+				setIP(argv[i + 1], &ip, &argflags);
+				break;
+			case 'p':
+				setPort(atoi(argv[i + 1]), &port, &argflags);
+				break;
+			default:
+				break;
+			}
+			i++;
+		}
+		if (flagtype == 2)
+		{
+			if (strcmp("msg", argv[i])) setMsg(argv[i + 1], &msg, &argflags);
+			else if (strcmp("íp", argv[i])) 
+				setIP(argv[i + 1], &ip, &argflags);
+			else if (strcmp("port", argv[i]))
+				setPort(atoi(argv[i + 1]), &port, &argflags);
+			i++;
+		}
+	}
+	printf("%d\n", argflags);
 	/*=============== INICIA OS WINSOCKS ==============*/
 
 	/*
@@ -68,14 +122,20 @@ int main(int argc, char* argv[])
 
 	memset((char*)&serv_addr, 0, sizeof(serv_addr)); /*Coloca a zero todos os bytes*/
 	serv_addr.sin_family = AF_INET; /*Address Family: Internet*/
-	serv_addr.sin_addr.s_addr = inet_addr(SERV_HOST_ADDR); /*IP no formato "dotted decimal" => 32 bits*/
-	serv_addr.sin_port = htons(SERV_UDP_PORT); /*Host TO Netowork Short*/
+	if (argflags & 0x02 == 0x02 && ip > 0)
+		serv_addr.sin_addr.s_addr = inet_addr(ip); /*IP no formato "dotted decimal" => 32 bits*/
+	else
+		serv_addr.sin_addr.s_addr = inet_addr(SERV_HOST_ADDR); /*IP no formato "dotted decimal" => 32 bits*/
+	if (argflags & 0x04 == 0x04)
+		serv_addr.sin_port = htons(port); /*Host TO Netowork Short*/
+	else
+		serv_addr.sin_port = htons(SERV_UDP_PORT); /*Host TO Netowork Short*/
 
 	/*====================== ENVIA MENSAGEM AO SERVIDOR ==================*/
 
-	msg_len = strlen(argv[1]);
+	msg_len = strlen(msg);
 
-	if (sendto(sockfd, argv[1], msg_len, 0, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) == SOCKET_ERROR)
+	if (sendto(sockfd, msg, msg_len, 0, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) == SOCKET_ERROR)
 		Abort("O subsistema de comunicacao nao conseguiu aceitar o datagrama");
 
 	printf("<CLI1>Mensagem enviada ... a entrega nao e' confirmada.\n");
@@ -113,3 +173,5 @@ void Abort(char* msg)
 	exit(EXIT_FAILURE);
 
 }
+
+
