@@ -21,7 +21,7 @@ void Abort(char* msg);
 int main(int argc, char* argv[])
 {
 	SOCKET sockfd;
-	int iResult, nbytes, msg_len, length_addr;
+	int iResult, nbytes, msg_len, length_addr, answer;
 	struct sockaddr_in serv_addr, cli_addr;
 	char buffer[BUFFERSIZE];
 	WSADATA wsaData;
@@ -95,12 +95,11 @@ int main(int argc, char* argv[])
 		printf("\n<SER1>Mensagem recebida {%s}\n", buffer);
 		printf("IP do Cliente: %s\n", inet_ntoa(cli_addr.sin_addr));
 
-		sprintf_s(buffer, strlen(buffer), "%d", (int)strlen(buffer));
+
 
 		/*====================== ENVIA MENSAGEM AO CLIENTE ==================*/
 
-		// char c = getchar();		// stop the server from answering the client for the purposes of testing client timeout
-		if (sendto(sockfd, buffer, strlen(buffer), 0, (struct sockaddr*)&cli_addr, sizeof(cli_addr)) == SOCKET_ERROR)
+		if (sendto(sockfd, (char *)&nbytes, sizeof(nbytes), 0, (struct sockaddr*)&cli_addr, sizeof(cli_addr)) == SOCKET_ERROR)
 		  	Abort("O subsistema de comunicacao nao conseguiu aceitar o datagrama");
 
 		printf("<SER1>Mensagem enviada ... a entrega nao e' confirmada.\n");

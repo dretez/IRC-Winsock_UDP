@@ -155,7 +155,8 @@ int main(int argc, char* argv[])
 
 	/*========================= RECEBER MENSAGEM ===========================*/
 
-	nbytes = recvfrom(sockfd, buffer, sizeof(buffer), 0, NULL, NULL);
+	int serv_answer;
+	nbytes = recvfrom(sockfd, (char *)&serv_answer, sizeof(serv_answer), 0, NULL, NULL);
 
 	if (nbytes == SOCKET_ERROR) {
 		if (WSAGetLastError() != WSAETIMEDOUT) Abort("Erro na recepcao de datagrams");
@@ -164,7 +165,7 @@ int main(int argc, char* argv[])
 
 	buffer[nbytes] = '\0'; /*Termina a cadeia de caracteres recebidos com '\0'*/
 
-	printf("\n<CLI>Mensagem recebida {%s}\n", buffer);
+	printf("\n<CLI>Mensagem recebida {%d}\n", serv_answer);
 
 	/*========================= FECHA O SOCKET ===========================*/
 
