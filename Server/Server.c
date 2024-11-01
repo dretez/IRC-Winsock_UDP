@@ -20,12 +20,6 @@ void Abort(char* msg);
 
 int main(int argc, char* argv[])
 {
-	SOCKET sockfd;
-	int iResult, nbytes, msg_len, length_addr, answer;
-	struct sockaddr_in serv_addr, cli_addr;
-	char buffer[BUFFERSIZE];
-	WSADATA wsaData;
-
 	/*=============== INICIA OS WINSOCKS ==============*/
 	
 	/*
@@ -35,31 +29,30 @@ int main(int argc, char* argv[])
 	* Windows Sockets e será retornado um código de erro caso não
 	* seja possível.
 	*/
-	iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
+#ifdef _WIN32	/* WSAStartup only needs to be called on windows platforms,
+				 * if this program is compiled for any other (POSIX) OS, 
+				 * theres no need to call this function */
+	WSADATA wsaData;
+	int iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
 	if (iResult != 0) {
 		printf("WSAStartup failed: %d\n", iResult);
-		getchar();
 		exit(1);
 	}
+#endif
 
 	/*============ CRIA O SOCKET PARA RECEPCAO/ENVIO DE DATAGRAMAS UDP ============*/
 
+	SOCKET sockfd;
 	if ((sockfd = socket(PF_INET, SOCK_DGRAM, 0)) == INVALID_SOCKET)
 		Abort("Impossibilidade de abrir socket");
 
 	/*=============== ASSOCIA O SOCKET AO  ENDERECO DE ESCUTA ===============*/
 
-	/*
-	* Nas linhas seguintes estamos a preencher a estrutura, nas respetivas propriedades
-	* com os dados que queremos para o socket.
-	* sin_family
-	* sin_addr.s_addr
-	* sin_port
-	*/
+	struct sockaddr_in serv_addr, cli1_addr, cli2_addr;
 	memset((char*)&serv_addr, 0, sizeof(serv_addr));
-	serv_addr.sin_family = AF_INET; /*Address Family: Internet*/
+	serv_addr.sin_family = AF_INET;					/*Address Family: Internet*/
 	serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);  /*Host TO Network Long*/
-	serv_addr.sin_port = htons(SERV_UDP_PORT);  /*Host TO Network Short*/
+	serv_addr.sin_port = htons(SERV_UDP_PORT);		/*Host TO Network Short*/
 
 	/*
 	* Na linha seguinte vamos então efetivamente associar o socket ao porto pretendido.
@@ -81,29 +74,27 @@ int main(int argc, char* argv[])
 	*/
 
 	while (1) {
-
 		fprintf(stderr, "<SER1>Esperando datagrama...\n");
-
-		length_addr = sizeof(cli_addr);
-		nbytes = recvfrom(sockfd, buffer, sizeof(buffer), 0, (struct sockaddr*)&cli_addr, &length_addr);
+		
+		char buffer[BUFFERSIZE];
+		int length_addr = sizeof(cli1_addr);
+		int nbytes = recvfrom(sockfd, buffer, sizeof(buffer), 0, (struct sockaddr*)&cli1_addr, &length_addr);
 
 		if (nbytes == SOCKET_ERROR)
 			Abort("Erro na recepcao de datagrams");
 
-		buffer[nbytes] = '\0'; /*Termina a cadeia de caracteres recebidos com '\0'*/
+		if (nbytes < sizeof(buffer))
+			buffer[nbytes] = '\0';
 
 		printf("\n<SER1>Mensagem recebida {%s}\n", buffer);
-		printf("IP do Cliente: %s\n", inet_ntoa(cli_addr.sin_addr));
-
-
+		printf("IP do Cliente: %s\n", inet_ntoa(cli1_addr.sin_addr));
 
 		/*====================== ENVIA MENSAGEM AO CLIENTE ==================*/
 
-		if (sendto(sockfd, (char *)&nbytes, sizeof(nbytes), 0, (struct sockaddr*)&cli_addr, sizeof(cli_addr)) == SOCKET_ERROR)
+		if (sendto(sockfd, (char *)&nbytes, sizeof(nbytes), 0, (struct sockaddr*)&cli1_addr, sizeof(cli1_addr)) == SOCKET_ERROR)
 		  	Abort("O subsistema de comunicacao nao conseguiu aceitar o datagrama");
 
 		printf("<SER1>Mensagem enviada ... a entrega nao e' confirmada.\n");
-
 	}
 
 }

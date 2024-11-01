@@ -18,12 +18,12 @@
     <ClCompile Include="Client.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="flags.c">
+    <ClCompile Include="arguments.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="flags.h">
+    <ClInclude Include="arguments.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

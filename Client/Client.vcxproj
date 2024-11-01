@@ -128,10 +128,10 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Client.c" />
-    <ClCompile Include="flags.c" />
+    <ClCompile Include="arguments.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="flags.h" />
+    <ClInclude Include="arguments.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

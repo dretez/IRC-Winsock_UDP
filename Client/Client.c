@@ -16,7 +16,7 @@ O protocolo usado e' o UDP.
 #define SERV_HOST_ADDR "127.0.0.1"
 #define SERV_UDP_PORT  6000
 #define BUFFERSIZE     4096
-#define TIMEOUT		   10000
+#define TIMEOUT		   10000		// 10 seconds
 
 void Abort(char* msg);
 
@@ -25,126 +25,45 @@ void Abort(char* msg);
 
 int main(int argc, char* argv[])
 {
-	SOCKET sockfd;
-	int msg_len, iResult;
-	struct sockaddr_in serv_addr;
-	WSADATA wsaData;
-	int nbytes;
-	char buffer[BUFFERSIZE];
-
-	char* msg = NULL, * ip = NULL;
+	char *msg = "Shut the IntelliSense warning", * ip = SERV_HOST_ADDR;
 	int port = SERV_UDP_PORT;
+	void* attr[3] = {&msg, &ip, &port};
 
-	int i, flagtype;
-	short mandatoryFlags = 0x01;		/* Each bit in this variable marks a flag
-									* that must be set when running the Client
-									* for ex5 we'll only use 1 mandatory flag */
-	short argflags = 0x00;			/* This is the variable that will be used
-									* to check which mandatory flags were used */
+	readargs(argc, argv, attr, 3);
 
+	/*=============== START WINSOCK ==============*/
 
-
-									/*========================= TESTA A SINTAXE =========================*/
-
-									/*
-									* Apesar de isto não ser necessário para a resolução dos exercícios,
-									* é algo que deve ser feito para validar se a aplicação é executada
-									* corretamente
-									*/
-	if (argc < 2) {
-		fprintf(stderr, "Sintaxe: %s [flags] -m frase_a_enviar\n", argv[0]);
-		getchar();
-		exit(EXIT_FAILURE);
-	}
-
-	for (i = 1; i < argc; i++)
-	{
-		flagtype = checkflag(argv[i]);
-		if (!flagtype)
-		{
-			fprintf(stderr, "Syntax: Expected a flag before \"%s\"\n", argv[i]);
-			fprintf(stderr, "Sintaxe: %s [flags] -m frase_a_enviar\n", argv[0]);
-			getchar();
-			exit(EXIT_FAILURE);
-		}
-		if (flagtype == 1)
-		{
-			switch (*(argv[i] + 1))
-			{
-			case 'm':
-				setMsg(argv[i + 1], &msg, &argflags);
-				break;
-			case 'i':
-				setIP(argv[i + 1], &ip, &argflags);
-				break;
-			case 'p':
-				setPort(atoi(argv[i + 1]), &port, &argflags);
-				break;
-			default:
-				break;
-			}
-			i++;
-		}
-		if (flagtype == 2)
-		{
-			if (strcmp("msg", argv[i])) setMsg(argv[i + 1], &msg, &argflags);
-			else if (strcmp("íp", argv[i]))
-				setIP(argv[i + 1], &ip, &argflags);
-			else if (strcmp("port", argv[i]))
-				setPort(atoi(argv[i + 1]), &port, &argflags);
-			i++;
-		}
-	}
-
-	if ((mandatoryFlags & argflags) != mandatoryFlags)
-	{
-
-		fprintf(stderr, "ERROR: Expected a message { -m \"Message here\"}");
-		getchar();
-		exit(EXIT_FAILURE);
-	}
-	/*=============== INICIA OS WINSOCKS ==============*/
-
-	/*
-	* Este é o primeiro passo que tem que ser feito quando se pretende
-	* criar uma aplicação recorrendo a Windows Sockets.
-	* No fundo estamos a indicar que a nossa aplicação pretende usar
-	* Windows Sockets e será retornado um código de erro caso não
-	* seja possível.
-	*/
-	iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
+#ifdef _WIN32	/* WSAStartup only needs to be called on windows platforms, if
+				 * this program is compiled for any other (POSIX) OS, there's no
+				 * need to call this function */
+	WSADATA wsaData;
+	int iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
 	if (iResult != 0) {
 		printf("WSAStartup failed: %d\n", iResult);
-		getchar();
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
+#endif
 
 	/*=============== CRIA SOCKET PARA ENVIO/RECEPCAO DE DATAGRAMAS ==============*/
 
-	sockfd = socket(PF_INET, SOCK_DGRAM, 0);
-	if (sockfd == INVALID_SOCKET)
+	SOCKET sockfd;
+	if ((sockfd = socket(PF_INET, SOCK_DGRAM, 0)) == INVALID_SOCKET)
 		Abort("Impossibilidade de criar socket");
 
-	/*=============== CRIA SOCKET PARA ENVIO/RECEPCAO DE DATAGRAMAS ==============*/
 	DWORD timeout = TIMEOUT; // DWORD unsigned long
 	setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout, sizeof(timeout));
 
 	/*================= PREENCHE ENDERECO DO SERVIDOR ====================*/
 
-	memset((char*)&serv_addr, 0, sizeof(serv_addr)); /*Coloca a zero todos os bytes*/
-	serv_addr.sin_family = AF_INET; /*Address Family: Internet*/
-	if (argflags & 0x02 == 0x02 && ip > 0)
-		serv_addr.sin_addr.s_addr = inet_addr(ip); /*IP no formato "dotted decimal" => 32 bits*/
-	else
-		serv_addr.sin_addr.s_addr = inet_addr(SERV_HOST_ADDR); /*IP no formato "dotted decimal" => 32 bits*/
-	if (argflags & 0x04 == 0x04)
-		serv_addr.sin_port = htons(port); /*Host TO Netowork Short*/
-	else
-		serv_addr.sin_port = htons(SERV_UDP_PORT); /*Host TO Netowork Short*/
+	struct sockaddr_in serv_addr;
+	memset((char*)&serv_addr, 0, sizeof(serv_addr));	/*Coloca a zero todos os bytes*/
+	serv_addr.sin_family = AF_INET;						/*Address Family: Internet*/
+	serv_addr.sin_addr.s_addr = inet_addr(ip);			/*IP no formato "dotted decimal" => 32 bits*/
+	serv_addr.sin_port = htons(port);					/*Host TO Netowork Short*/
 
 	/*====================== ENVIA MENSAGEM AO SERVIDOR ==================*/
 
-	msg_len = strlen(msg);
+	int msg_len = strlen(msg);
 
 	if (sendto(sockfd, msg, msg_len, 0, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) == SOCKET_ERROR)
 		Abort("O subsistema de comunicacao nao conseguiu aceitar o datagrama");
@@ -155,17 +74,23 @@ int main(int argc, char* argv[])
 
 	/*========================= RECEBER MENSAGEM ===========================*/
 
+	int nbytes;
+	char buffer[BUFFERSIZE];	// buffer isn't actually used in this implementation
 	int serv_answer;
-	nbytes = recvfrom(sockfd, (char *)&serv_answer, sizeof(serv_answer), 0, NULL, NULL);
+	//nbytes = recvfrom(sockfd, (char *)&serv_answer, sizeof(serv_answer), 0, NULL, NULL);
+	nbytes = recvfrom(sockfd, buffer, sizeof(buffer), 0, NULL, NULL);
 
 	if (nbytes == SOCKET_ERROR) {
 		if (WSAGetLastError() != WSAETIMEDOUT) Abort("Erro na recepcao de datagrams");
 		else Abort("Timeout na recepcao");
 	}
 
-	buffer[nbytes] = '\0'; /*Termina a cadeia de caracteres recebidos com '\0'*/
+	if (nbytes < sizeof(buffer))	// buffer has a fixed size, there's no need
+		buffer[nbytes] = '\0';		// to close the string with '\0' if it's
+									// already completely filled,
+									
 
-	printf("\n<CLI>Mensagem recebida {%d}\n", serv_answer);
+	printf("\n<CLI>Mensagem recebida {%s}\n", buffer);
 
 	/*========================= FECHA O SOCKET ===========================*/
 
@@ -175,6 +100,7 @@ int main(int argc, char* argv[])
 	exit(EXIT_SUCCESS);
 }
 
+
 /*________________________________ Abort________________________________________
   Mostra uma mensagem de erro e o código associado ao ultimo erro com Winsocks.
   Termina a aplicacao com "exit status" a 1 (constante EXIT_FAILURE)
@@ -182,10 +108,8 @@ ________________________________________________________________________________
 
 void Abort(char* msg)
 {
-
 	fprintf(stderr, "<CLI1>Erro fatal: <%s> (%d)\n", msg, WSAGetLastError());
 	exit(EXIT_FAILURE);
-
 }
 
 
