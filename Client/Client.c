@@ -16,7 +16,7 @@ O protocolo usado e' o UDP.
 #define SERV_HOST_ADDR "127.0.0.1"
 #define SERV_UDP_PORT  6000
 #define BUFFERSIZE     4096
-#define TIMEOUT		   10000		// 10 seconds
+#define TIMEOUT		   30000		// 30 seconds
 
 void Abort(char* msg);
 
@@ -70,27 +70,32 @@ int main(int argc, char* argv[])
 
 	printf("<CLI1>Mensagem enviada ... a entrega nao e' confirmada.\n");
 
-	printf("Porto do socket: %d\n", ntohs(serv_addr.sin_port));
-
 	/*========================= RECEBER MENSAGEM ===========================*/
 
 	int nbytes;
-	char buffer[BUFFERSIZE];	// buffer isn't actually used in this implementation
-	int serv_answer;
-	//nbytes = recvfrom(sockfd, (char *)&serv_answer, sizeof(serv_answer), 0, NULL, NULL);
-	nbytes = recvfrom(sockfd, buffer, sizeof(buffer), 0, NULL, NULL);
+	struct sockaddr_in pair, sender;
+	int len_addrs = sizeof(struct sockaddr_in);
+	memset((char*)&pair, 0, sizeof(serv_addr));	/*Coloca a zero todos os bytes*/
+	pair.sin_family = AF_INET;						/*Address Family: Internet*/
+	pair.sin_addr.s_addr = inet_addr(ip);			/*IP no formato "dotted decimal" => 32 bits*/
+	pair.sin_port = htons(port);					/*Host TO Netowork Short*/
 
-	if (nbytes == SOCKET_ERROR) {
+	if ((nbytes = recvfrom(sockfd, (char *)&pair, sizeof(pair), 0, (struct sockaddr*)&sender, &len_addrs)) == SOCKET_ERROR) {
 		if (WSAGetLastError() != WSAETIMEDOUT) Abort("Erro na recepcao de datagrams");
 		else Abort("Timeout na recepcao");
 	}
+	printf("\n<CLI>Server: {%s:%d}\n", inet_ntoa(serv_addr.sin_addr), ntohs(serv_addr.sin_port));
+	printf("\n<CLI>Sender: {%s:%d}\n", inet_ntoa(sender.sin_addr), ntohs(sender.sin_port));
 
-	if (nbytes < sizeof(buffer))	// buffer has a fixed size, there's no need
-		buffer[nbytes] = '\0';		// to close the string with '\0' if it's
-									// already completely filled,
-									
+	if (!memcmp(&serv_addr, &sender, sizeof(struct sockaddr_in))) {
+		if (sendto(sockfd, (char*)&sender, sizeof(sender), 0, (struct sockaddr*) &pair, len_addrs) == SOCKET_ERROR) {
+			Abort("O subsistema de comunicacao nao conseguiu aceitar o datagrama");
+		}
+	}
+	else
+		pair = sender;
 
-	printf("\n<CLI>Mensagem recebida {%s}\n", buffer);
+	printf("\n<CLI>Par encontrado: {%s:%d}\n", inet_ntoa(pair.sin_addr), ntohs(pair.sin_port));
 
 	/*========================= FECHA O SOCKET ===========================*/
 

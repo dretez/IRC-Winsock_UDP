@@ -48,53 +48,40 @@ int main(int argc, char* argv[])
 
 	/*=============== ASSOCIA O SOCKET AO  ENDERECO DE ESCUTA ===============*/
 
-	struct sockaddr_in serv_addr, cli1_addr, cli2_addr;
+	struct sockaddr_in serv_addr;
 	memset((char*)&serv_addr, 0, sizeof(serv_addr));
 	serv_addr.sin_family = AF_INET;					/*Address Family: Internet*/
 	serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);  /*Host TO Network Long*/
 	serv_addr.sin_port = htons(SERV_UDP_PORT);		/*Host TO Network Short*/
 
-	/*
-	* Na linha seguinte vamos então efetivamente associar o socket ao porto pretendido.
-	* Para isso usamos a função bind() e é onde será feita a verificação se o porto
-	* já está ou não a ser utilizado. Se o porto já estiver a ser usado então a
-	* aplicação será terminada e apresentamos a mensagem de erro, neste caso: 
-	* "Impossibilidade de registar-se para escuta"
-	*/
 	if (bind(sockfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) == SOCKET_ERROR)
 		Abort("Impossibilidade de registar-se para escuta");
 
-
 	/*================ PASSA A ATENDER CLIENTES INTERACTIVAMENTE =============*/
 	
-	/*
-	* Nas linhas seguintes vamos atender os clientes.
-	* Estamos a usar um ciclo "infinito" (ciclo while) pois o objetivo do servidor
-	* é estar sempre a atender clientes.
-	*/
-
 	while (1) {
 		fprintf(stderr, "<SER1>Esperando datagrama...\n");
 		
 		char buffer[BUFFERSIZE];
-		int length_addr = sizeof(cli1_addr);
-		int nbytes = recvfrom(sockfd, buffer, sizeof(buffer), 0, (struct sockaddr*)&cli1_addr, &length_addr);
+		int nbytes;
 
-		if (nbytes == SOCKET_ERROR)
+		struct sockaddr_in c1;
+		int length_addr = sizeof(c1);
+		if ((nbytes = recvfrom(sockfd, buffer, sizeof(buffer), 0, (struct sockaddr*)&c1, &length_addr)) == SOCKET_ERROR)
+			Abort("Erro na recepcao de datagrams");	
+		printf("\n<SER1>Cliente encontrado. Aguardando par...\n");
+
+		struct sockaddr_in c2;
+		length_addr = sizeof(c2);
+		if ((nbytes = recvfrom(sockfd, buffer, sizeof(buffer), 0, (struct sockaddr*)&c2, &length_addr)) == SOCKET_ERROR)
 			Abort("Erro na recepcao de datagrams");
 
-		if (nbytes < sizeof(buffer))
-			buffer[nbytes] = '\0';
+		printf("\n<SER1>Encontrado par.\n");
 
-		printf("\n<SER1>Mensagem recebida {%s}\n", buffer);
-		printf("IP do Cliente: %s\n", inet_ntoa(cli1_addr.sin_addr));
 
-		/*====================== ENVIA MENSAGEM AO CLIENTE ==================*/
-
-		if (sendto(sockfd, (char *)&nbytes, sizeof(nbytes), 0, (struct sockaddr*)&cli1_addr, sizeof(cli1_addr)) == SOCKET_ERROR)
+		if (sendto(sockfd, (char *)&c1, sizeof(c1), 0, (struct sockaddr*)&c2, sizeof(c2)) == SOCKET_ERROR)
 		  	Abort("O subsistema de comunicacao nao conseguiu aceitar o datagrama");
 
-		printf("<SER1>Mensagem enviada ... a entrega nao e' confirmada.\n");
 	}
 
 }

@@ -1,6 +1,7 @@
 #include "arguments.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 
 void readargs(int argc, char* argv[], void* attributes[], int attribLen)
