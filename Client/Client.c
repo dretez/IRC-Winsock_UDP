@@ -9,7 +9,7 @@ O protocolo usado e' o UDP.
 #include <winsock.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "flags.h"
+#include "arguments.h"
 
 #pragma comment(lib, "Ws2_32.lib")
 
